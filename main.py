@@ -63,8 +63,6 @@ def joinMeet():
 
 
 def takeScreenshot(date,month,hr,id):
-	time.sleep(10)
-
 	try:
 		screen = driver.find_element_by_xpath('//*[@id="ow3"]/div[1]/div/div[9]/div[3]/div[2]/div[1]/div[2]/div[1]/div[3]')
 	#If there is no 'presenting' web element
@@ -113,6 +111,7 @@ while(studentCount()>1):
 	id+=1
 	if not captured:
 		break
+	time.sleep(60)
 
 driver.quit()
 
