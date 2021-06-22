@@ -7,15 +7,22 @@ import cv2
 import shutil
 import os
 
+accountLoginURL = 'https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=GAZAAQ'
+meetURL = 'https://meet.google.com/zba-wdyx-tfs'
+gHome = 'https://google.com/'
+
+mail_address = '19u230@psgtech.ac.in'
+with open('password.txt','r') as f:
+	password = f.readline()
+
 currentTime = datetime.datetime.now()
 today = currentTime.day
 month = currentTime.month
 
 
 def googleLogin(mail_address, password):
-	# Login Page
-	driver.get(
-		'https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=GAZAAQ')
+	
+	driver.get(accountLoginURL)
 
 	# input Gmail
 	driver.find_element_by_id("identifierId").send_keys(mail_address)
@@ -30,7 +37,7 @@ def googleLogin(mail_address, password):
 	driver.implicitly_wait(10)
 
 	# go to google home page
-	driver.get('https://google.com/')
+	driver.get(gHome)
 	driver.implicitly_wait(100)
 
 
@@ -48,28 +55,22 @@ def turnOffMicCam():
 	driver.implicitly_wait(3000)
 
 
-def joinNow():
-	# Join meet
+def joinMeet():
 	time.sleep(5)
 	driver.implicitly_wait(2000)
 	driver.find_element_by_css_selector(
 		'div.uArJ5e.UQuaGc.Y5sE8d.uyXBBb.xKiqt').click()
 
-
-def AskToJoin():
-	# Ask to Join meet
-	time.sleep(5)
-	driver.implicitly_wait(2000)
-	driver.find_element_by_css_selector(
-		'div.uArJ5e.UQuaGc.Y5sE8d.uyXBBb.xKiqt').click()
-	# Ask to join and join now buttons have same xpaths
 
 def takeScreenshot(date,month,hr,id):
 	time.sleep(10)
+
 	try:
 		screen = driver.find_element_by_xpath('//*[@id="ow3"]/div[1]/div/div[9]/div[3]/div[2]/div[1]/div[2]/div[1]/div[3]')
+	#If there is no 'presenting' web element
 	except:
 		screen = None
+
 	if screen is not None:
 		screen.screenshot(f'lastClassSS/{date}-{month}-{hr}-{id}.png')
 		return True
@@ -87,12 +88,6 @@ def studentCount():
 	except:
 		return -1
 
-# assign email id and password
-mail_address = '19u230@psgtech.ac.in'
-with open('password.txt','r') as f:
-	password = f.readline()
-
-# create chrome instamce
 opt = Options()
 opt.add_argument('--disable-blink-features=AutomationControlled')
 opt.add_argument('--start-maximized')
@@ -102,16 +97,14 @@ opt.add_experimental_option("prefs", {
 	"profile.default_content_setting_values.geolocation": 0,
 	"profile.default_content_setting_values.notifications": 1
 })
+
 driver = webdriver.Chrome(options=opt)
 
-# login to Google account
 googleLogin(mail_address, password)
 
-# go to google meet
-driver.get('https://meet.google.com/zba-wdyx-tfs')
+driver.get(meetURL)
 turnOffMicCam()
-# AskToJoin()
-joinNow()
+joinMeet()
 time.sleep(5)
 
 id = 1
@@ -122,59 +115,55 @@ while(studentCount()>1):
 		break
 
 driver.quit()
-# Sorting Screenshots
 
-def dhash(image,hashsize=8):
-	resized = cv2.resize(image, (hashsize + 1, hashsize))
-	# compute the (relative) horizontal gradient between adjacent
-	# column pixels
-	diff = resized[:, 1:] > resized[:, :-1]
-	# convert the difference image to a hash
-	return sum([2 ** i for (i, v) in enumerate(diff.flatten()) if v])
 
 haystackDir = '/home/rahul/Documents/College/classScreenshots'
 needleDir = '/home/rahul/Noah-Willis/python projects/gmeetAutomation/lastClassSS/'
 haystackImages = list(paths.list_images(haystackDir))
 needleImages = list(paths.list_images(needleDir))
-
-
 haystack = {}
 
+#Hashing function that converts images to hashes
+def dhash(image,hashsize=8):
+	#Resize image to 9x8 pixels
+	resized = cv2.resize(image, (hashsize + 1, hashsize))
+	#compute the difference between the adjacent pixels
+	diff = resized[:, 1:] > resized[:, :-1]
+	#Return the hash value of the image
+	return sum([2 ** i for (i, v) in enumerate(diff.flatten()) if v])
+
+#Computing the hash values of images in the main directory
 for h in haystackImages:
-	# load the image from disk
 	image = cv2.imread(h)
-	# if the image is None then we could not load it from disk (so
-	# skip it)
 	if image is None:
 		continue
-	# convert the image to grayscale and compute the hash
+	#converting image to grayscale
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	#Computing the hash value of the image
 	imageHash = dhash(image)
-	# update the haystack dictionary
 	l = haystack.get(imageHash,'')
 	l+=h
 	haystack[imageHash] = l
 
-# loop over the needle paths
+#Computing the hash value of the taken screenshots
 for n in needleImages:
-	# load the image from disk
 	image = cv2.imread(n)
-	# if the image is None then we could not load it from disk (so
-	# skip it)
 	if image is None:
 		continue
-	# convert the image to grayscale and compute the hash
+	#converting image to grayscale
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	#Computing the hash value
 	imageHash = dhash(image)
-	# grab all image paths that match the hash
 	matchedImages = haystack.get(imageHash,None)
 
+	#If the image is not present in the main directory(unique image), move the image to the main directory
 	if matchedImages is None:
 		ll = haystack.get(imageHash,'')
 		ll+=n
 		haystack[imageHash] = ll
 		shutil.move(n,haystackDir)
 
+#Delete all the remaining screenshots (not a unique image)
 for n in os.listdir(needleDir):
     os.remove(os.path.join(needleDir, n))
 
