@@ -8,17 +8,56 @@ import shutil
 import os
 
 accountLoginURL = 'https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=GAZAAQ'
-meetURL = 'https://meet.google.com/zba-wdyx-tfs'
-gHome = 'https://google.com/'
+gHomeURL = 'https://google.com/'
 
 mail_address = '19u230@psgtech.ac.in'
 with open('password.txt','r') as f:
-	password = f.readline()
+	lines = f.readlines()
+	password = lines[0]
+	parentDir = lines[1]
 
 currentTime = datetime.datetime.now()
 today = currentTime.day
 month = currentTime.month
+year = currentTime.year
 
+def classURL(option):
+	if option==1:
+		classDir = f'Industrial_Instrumentation/{today}-{month}-{year}'
+		return 'https://meet.google.com/fkq-tcqk-gte',classDir # Industrial instrumentation 1
+	if option==2:
+		classDir = f'Control_Systems_2/{today}-{month}-{year}'
+		return 'https://meet.google.com/qgn-myxw-duo',classDir # Control Systems 2
+	if option==3:
+		classDir = f'MP_MC/{today}-{month}-{year}'
+		return 'https://meet.google.com/vcj-qsmb-iev',classDir # MP/MC 
+	if option==4:
+		classDir = f'DSP/{today}-{month}-{year}'
+		return 'https://meet.google.com/cmy-vpzo-tfu' ,classDir # DSP
+	if option==5:
+		classDir = f'OS/{today}-{month}-{year}'
+		return 'https://meet.google.com/izk-qqox-eas',classDir # OS
+	if option==6:
+		classDir = f'Computer_Networks/{today}-{month}-{year}'
+		return 'https://meet.google.com/kvg-vupm-ipt',classDir  # Computer Networks
+	if option==7:
+		classDir = f'MP_MC_DSP_Lab/{today}-{month}-{year}'
+		return 'https://meet.google.com/jxz-tvgf-aci',classDir  # MP/MC and DSP lab
+	if option==8:
+		classDir = f'CS Lab/{today}-{month}-{year}'
+		return 'https://meet.google.com/imi-ybdp-abb' ,classDir # Control Systems lab
+	if option==9:
+		classDir = f'Testing/{today}-{month}-{year}'
+		return 'https://meet.google.com/rek-qgeq-nbh',classDir
+
+def createDirectory(parentDir,classDir):
+	path = os.path.join(parentDir,classDir)
+	try:
+		os.makedirs(path,exist_ok=True)
+		return path
+	except OSError as error:
+		print(error)
+		return path
 
 def googleLogin(mail_address, password):
 	
@@ -37,7 +76,7 @@ def googleLogin(mail_address, password):
 	driver.implicitly_wait(10)
 
 	# go to google home page
-	driver.get(gHome)
+	driver.get(gHomeURL)
 	driver.implicitly_wait(100)
 
 
@@ -64,13 +103,15 @@ def joinMeet():
 
 def takeScreenshot(date,month,hr,id):
 	try:
-		screen = driver.find_element_by_xpath('//*[@id="ow3"]/div[1]/div/div[9]/div[3]/div[2]/div[1]/div[2]/div[1]/div[3]')
+		#screen = driver.find_element_by_xpath('//*[@id="ow3"]/div[1]/div/div[9]/div[3]/div[2]/div[1]/div[3]/div[1]/div[3]')
+		screen = driver.find_element_by_tag_name('video')
 	#If there is no 'presenting' web element
 	except:
 		screen = None
 
 	if screen is not None:
 		screen.screenshot(f'lastClassSS/{date}-{month}-{hr}-{id}.png')
+		print(f'\nScreenshot taken {date}-{month}-{id}')
 		return True
 	else:
 		return False
@@ -85,6 +126,16 @@ def studentCount():
 			return -1
 	except:
 		return -1
+
+choiceValid = False
+while ~choiceValid:
+	print('\nChoices:\nIndustrial Instrumentation - 1\nControl Systems 2 - 2\nMP & MC - 3\nDSP - 4\nOS - 5\nComputer Networks - 6\nMpMc & DSP lab - 7\nControl Systems Lab - 8')
+	choice = int(input('\nEnter your choice: '))
+	if choice>=1 and choice<=9:
+		choiceValid = True
+		break
+
+[meetURL,classDir] = classURL(choice)
 
 opt = Options()
 opt.add_argument('--disable-blink-features=AutomationControlled')
@@ -106,18 +157,31 @@ joinMeet()
 time.sleep(5)
 
 id = 1
-while(studentCount()>1):
-	captured = takeScreenshot(today,month,currentTime.hour,id)
-	id+=1
-	if not captured:
+while(studentCount()>10):
+	time.sleep(30)
+	if studentCount()<=10:
 		break
-	time.sleep(60)
+	time.sleep(30)
+	if studentCount()<=10:
+		break
+	captured = takeScreenshot(today,month,currentTime.hour,id)
+	if captured:
+		id+=1	
+	time.sleep(30)
+	if studentCount()<=10:
+		break
+	time.sleep(30)
+	if studentCount()<=10:
+		break
 
+print('\nMeeting has ended!')
 driver.quit()
 
+print('\nProcessing Images!')
 
-haystackDir = '/home/rahul/Documents/College/classScreenshots'
-needleDir = '/home/rahul/Noah-Willis/python projects/gmeetAutomation/lastClassSS/'
+print('Organizing')
+haystackDir = createDirectory(parentDir,classDir)
+needleDir = 'lastClassSS/'
 haystackImages = list(paths.list_images(haystackDir))
 needleImages = list(paths.list_images(needleDir))
 haystack = {}
@@ -166,3 +230,4 @@ for n in needleImages:
 for n in os.listdir(needleDir):
     os.remove(os.path.join(needleDir, n))
 
+print('\nSaving Images done!\n')
